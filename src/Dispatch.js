@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import App from './App';
-import { initializeModel } from './Model'
+import { initializeModel, setCurrentMealField } from './Model'
 import { update } from './Actions'
 
 export default class Dispatch {
@@ -16,6 +16,7 @@ export default class Dispatch {
   
   dispatch(action) {
     this.model = update(this.model, action);
+    console.log(setCurrentMealField(this.model, 'name', 'sdf'));
     ReactDOM.render(
       <App model={this.model}
                d={this.dispatch.bind(this)} />,
