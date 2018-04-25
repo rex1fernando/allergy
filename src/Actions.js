@@ -1,6 +1,9 @@
 import { incrementCurrentDay, decrementCurrentDay,
          newMeal, setCurrentMeal,
-         setCurrentMealField } from './Model'
+         setCurrentMealField, deleteCurrentMeal,
+         newNote, deleteCurrentNote,
+         setCurrentNote, setCurrentNoteField, reportError,
+         setAPIKey, setMessage } from './Model'
 
 var possibleActions = [
   // main screen
@@ -21,13 +24,19 @@ var possibleActions = [
   
   // note screen
   { type: 'update_note_time' },
-  { type: 'update_note_itch_level' },
+  { type: 'update_note_itch' },
   { type: 'update_note_text' }
 ]
 
 
 export function update(model, action) {
   switch (action.type) {    
+    case 'set_key':
+      return setAPIKey(model, action.value);
+    case 'reset_message':
+      return setMessage(model, null);
+    
+    
     case 'view_previous_day':
       return decrementCurrentDay(model);    
     case 'view_next_day':
@@ -38,6 +47,8 @@ export function update(model, action) {
       return setCurrentMeal(model, action.id);
     case 'finish_meal':
       return setCurrentMeal(model, null);
+    case 'delete_meal':
+      return deleteCurrentMeal(model);
     case 'update_meal_name':
       return setCurrentMealField(model, 'name', action.value);
     case 'update_meal_time':
@@ -48,7 +59,24 @@ export function update(model, action) {
       return setCurrentMealField(model, 'photo', action.value);
     case 'update_meal_notes':
       return setCurrentMealField(model, 'notes', action.value);
-    case 'default':
-      throw Error('Unknown action.');
+      
+    case 'new_note':
+      return newNote(model);
+    case 'view_note':
+      return setCurrentNote(model, action.id);
+    case 'finish_note':
+      return setCurrentNote(model, null);
+    case 'delete_note':
+      return deleteCurrentNote(model);
+    case 'update_note_time':
+      return setCurrentNoteField(model, 'time', action.value);
+    case 'update_note_itch':
+      return setCurrentNoteField(model, 'itch', action.value);
+    case 'update_note_text':
+      return setCurrentNoteField(model, 'text', action.value);
+
+      
+    default:
+      return reportError(model, 'Unkown Action', 'Talk to Rex. Sorry!');
   }
 }

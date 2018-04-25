@@ -1,19 +1,23 @@
 import React, { Component } from 'react';
 import { Button, Header, List, Modal,
-         Image, Form, TextArea, Icon,
+         Image as SImage, Form, TextArea, Icon,
          Input, Container, Label, 
-         Dropdown } from 'semantic-ui-react'
+         Dropdown, Message } from 'semantic-ui-react'
 import Flatpickr from 'react-flatpickr'
-import { Slider } from 'react-semantic-ui-range'
+import Slider from 'rc-slider';
 import ReactTags from 'react-tag-autocomplete'
 import { currentDay, sortedMeals,
-         currentMeal, allIngredients } from './Model'
+         currentMeal, allIngredients,
+         currentNote, sortedNotes,
+         dateFromTime, time } from './Model'
 import { format } from 'date-fns'
 
 
-
-
 import './App.css';
+import 'rc-slider/assets/index.css';
+
+
+
 
 const inlineStyle = {
   modal : {
@@ -23,36 +27,26 @@ const inlineStyle = {
   }
 };
 
+// Resize images for efficiency
+function resize(img, preferredWidth){
+  /////////  3-3 manipulate image
+  var ratio = preferredWidth / img.width;
+  var canvas = document.createElement('canvas');
+  canvas.width = img.width * ratio;
+  canvas.height = img.height * ratio;
+  var ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  //////////4. export as dataUrl
+  return canvas.toDataURL();
+}
+
+
+////// Modal boxes for meal and note
 
 class Meal extends Component {
   constructor(props) {
     super(props);
-  }
-  
-  readURL(input) {
-    if (input.files && input.files[0]) {
-      console.log(input.files[0]);
-      var reader = new FileReader();
-      
-      reader.onload = function(e) {
-        this.setState({ image: e.target.result });
-      }.bind(this);
-      
-      reader.readAsDataURL(input.files[0]);
-    }
-  }
-  
-  addIngredient(e, data) {
-    this.state.ingredients.push({
-      key: data.value,
-      value: data.value,
-      text: data.value
-    });
-    this.state.ingredientsC.push(data.value);
-    this.setState({ 
-      ingredients: this.state.ingredients,
-      ingredientsC: this.state.ingredientsC
-    });
+    this.state = {modalOpen: false};
   }
   
   ingredientChoices() {
@@ -66,32 +60,42 @@ class Meal extends Component {
     return this.props.allIngredients.map(f);
   }
   
-  changeTitle(e, data) {
-    console.log(data.value);
-    this.setState({ title: data.value });
+  setModalOpen() {
+    this.setState({modalOpen: true});
+  }
+  setModalClosed() {
+    this.setState({modalOpen: false});
   }
   
   render() {
     var d = this.props.d;
     var updateName = (e, data) => {
-      d({ type: 'update_meal_name', value: data.value})();
+      d({ type: 'update_meal_name', value: data.value })();
     }
     var updateTime = (date) => {
-      d({ type: 'update_meal_time', value: date})();
+      d({ type: 'update_meal_time', value: time(date[0]) })();
     }
     var updateIngredients = (e, data) => {
-      d({ type: 'update_meal_ingredients', value: data.value})();
+      d({ type: 'update_meal_ingredients', value: data.value })();
     }
-    var updatePhoto = (e) {
+    var updatePhoto = (e) => {
       if (e.target.files && e.target.files[0]) {
         var reader = new FileReader();
         
         reader.onload = function(e) {
-          d({ type: 'update_meal_photo', value: e.target.result })();
+          var image = new Image();
+          image.addEventListener('load', function() {
+            var img = resize(image, 750)
+            d({ type: 'update_meal_photo', value: img })();
+          });
+          image.src = e.target.result;
         }.bind(this);
-        
+              
         reader.readAsDataURL(e.target.files[0]);
       }
+    }
+    var updateNotes = (e, data) => {
+      d({ type: 'update_meal_notes', value: data.value})();
     }
     
     return (
@@ -100,13 +104,14 @@ class Meal extends Component {
             <Input value={this.props.meal.name} onChange={updateName} /> 
             <Header.Subheader>
               <Flatpickr data-enable-time data-no-calendar data-time_24hr
-                value={this.props.meal.time} onChange={updateTime}/>
+                value={dateFromTime(this.props.meal.time)} onChange={updateTime}/>
             </Header.Subheader>
           </Modal.Header>
           <Modal.Content image>
-            <Image wrapped size='medium' src={this.props.meal.image} />
+            <SImage wrapped size='medium' src={this.props.meal.photo} />
 
             <Modal.Description>
+              <MessageHandler message={this.props.message} d={d} />        
               <Header>Ingredients:</Header>
                 <Dropdown 
                   selection
@@ -121,7 +126,9 @@ class Meal extends Component {
               <Form>
               
                 <Header>Photo:</Header>
-                <Input type="file" name="fileToUpload" id="fileToUpload" accept="image/*" onChange={ (e) => this.readURL(e.target) }/>
+                <Input type="file" name="fileToUpload" id="fileToUpload" accept="image/*" 
+                  
+                  onChange={updatePhoto}/>
                 <Header>Other Notes:</Header>
                 <TextArea 
                   autoHeight 
@@ -134,6 +141,26 @@ class Meal extends Component {
             </Modal.Description>
           </Modal.Content>
           <Modal.Actions>
+            <Button color='red' onClick={this.setModalOpen.bind(this)}>
+              <Icon name='trash' /> Delete
+            </Button>
+            <Modal 
+              open={this.state.modalOpen}
+              basic size='small'
+              style={inlineStyle.modal}>
+              <Header icon='archive' content='Confirm' />
+              <Modal.Content>
+                <p>Are you sure you want to delete?</p>
+              </Modal.Content>
+              <Modal.Actions>
+                <Button basic color='grey' inverted onClick={this.setModalClosed.bind(this)}>
+                  <Icon name='remove' /> No
+                </Button>
+                <Button color='red' inverted onClick={d({ type: 'delete_meal'})}>
+                  <Icon name='checkmark' /> Yes
+                </Button>
+              </Modal.Actions>
+            </Modal>
             <Button color='green' onClick={d({ type: 'finish_meal' })}>
               <Icon name='check' /> Finish
             </Button>
@@ -146,49 +173,90 @@ class Meal extends Component {
 class Note extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      image: null
-    };
+    this.state = {modalOpen: false};
+  }
+  
+  setModalOpen() {
+    this.setState({modalOpen: true});
+  }
+  setModalClosed() {
+    this.setState({modalOpen: false});
   }
   
   render() {
+    var d = this.props.d;
+  
+    var updateTime = (date) => {
+      d({ type: 'update_note_time', value: time(date[0]) })();
+    }
+    var updateItch = (value) => {
+      d({ type: 'update_note_itch', value: value})();
+    }
+    var updateText = (e, data) => {
+      d({ type: 'update_note_text', value: data.value})();
+    }
+    
     return (
-      <Modal open={this.props.open}  style={inlineStyle.modal}>
+      <Modal open={true}  style={inlineStyle.modal}>
         <Modal.Header>Record Your Symptoms
           <Header.Subheader>
             <Flatpickr data-enable-time data-no-calendar data-time_24hr
-              value={new Date().setHours(13)}/>
+              value={dateFromTime(this.props.note.time)}
+              onChange={updateTime}/>
           </Header.Subheader>
         </Modal.Header>
         <Modal.Content image>
-          <Image wrapped size='medium' src='/assets/images/wireframe/image.png' />
+          <SImage wrapped size='medium' src='' />
           
           <Modal.Description>
+            <MessageHandler message={this.props.message} d={d} />        
             <Header>Itching Level:</Header>
-            <Slider inverted={false} 
-              settings={{
-                start: this.props.itch,
-                min:0,
-                max:10,
-                step:1,
-                onChange: this.props.changeItch
-              }} />
-            <Label color="red">{this.props.itch}</Label>
+            <Slider 
+              min={0}
+              max={10}
+              value={this.props.note.itch}
+              onChange={updateItch} />
+            <Label color="blue">{this.props.note.itch}</Label>
             <Header>Notes:</Header>
             <Form>
-              <TextArea autoHeight placeholder='Try adding multiple lines' rows={2} />
+              <TextArea autoHeight placeholder='Notes here' rows={2} 
+                value={this.props.note.text}
+                onChange={updateText} />
             </Form>
           </Modal.Description>
         </Modal.Content>
         <Modal.Actions>
-          <Button color='green' onClick={this.props.handleFinish}>
-            <Icon name='check' /> Finish
+        <Button color='red' onClick={this.setModalOpen.bind(this)}>
+          <Icon name='trash' /> Delete
+        </Button>
+        <Modal 
+          open={this.state.modalOpen}
+          basic size='small'
+          style={inlineStyle.modal}>
+          <Header icon='archive' content='Confirm' />
+          <Modal.Content>
+            <p>Are you sure you want to delete?</p>
+          </Modal.Content>
+          <Modal.Actions>
+            <Button basic color='grey' inverted onClick={this.setModalClosed.bind(this)}>
+              <Icon name='remove' /> No
+            </Button>
+            <Button color='red' inverted onClick={d({ type: 'delete_note'})}>
+              <Icon name='checkmark' /> Yes
             </Button>
           </Modal.Actions>
         </Modal>
+        <Button color='green' onClick={d({ type: 'finish_note' })}>
+          <Icon name='check' /> Finish
+        </Button>
+      </Modal.Actions>
+    </Modal>
       );
     }
   }
+  
+
+////// List items for meals and notes
   
 function MealItem(props) {
   var d = props.d;
@@ -199,7 +267,7 @@ function MealItem(props) {
       <List.Content>
         <List.Header as='a'>{props.meal.name}</List.Header>
         <List.Description as='a'>
-          {format(props.meal.time, 'HH:mm')}
+          {props.meal.time.h.toString().padStart(2, '0')}:{props.meal.time.m.toString().padStart(2, '0')}
         </List.Description>
       </List.Content>
     </List.Item>
@@ -207,21 +275,73 @@ function MealItem(props) {
 }
 
 function NoteItem(props) {
-  var d = (action) => {
-    return () => props.d(action);
-  }
+  var d = props.d;
   
   return (
-    <List.Item>
+    <List.Item onClick={d({ type: 'view_note', id: props.note.id })}>
       <List.Icon name='clipboard' size='large' verticalAlign='middle' />
       <List.Content>
-        <List.Header as='a'>{format(props.note.time, 'HH:mm')}</List.Header>
+        <List.Header as='a'>{props.note.time.h.toString().padStart(2, '0')}:{props.note.time.m.toString().padStart(2, '0')}</List.Header>
         <List.Description as='a'>Itching Level: {props.note.itch}</List.Description>
       </List.Content>
     </List.Item>
   );
 }
 
+
+////// Message popup
+
+function MessageHandler(props) {
+  var d = props.d;
+  console.log(d);
+  
+  if (props.message === null) {
+    return null;
+  } else if (props.message.type==='error') {
+    return (
+      <Message negative
+               onDismiss={d({ type: 'reset_message' })}>
+        <Message.Header>{props.message.title}</Message.Header>
+        <p>{props.message.text}</p>
+      </Message>);
+  }
+}
+
+class APIKeyInput extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      key: ''
+    }
+  }
+  
+  setKey(e, data) {
+    this.setState({ key: data.value });
+  }
+  
+  render() {
+    var d = this.props.d;
+    
+    if (this.props.apikey !== null && this.props.apikey !== undefined) {
+      return null;
+    } else {
+      return (
+        <Modal open={true} style={inlineStyle.modal}>
+          <Modal.Header>Please enter your key</Modal.Header>
+          <Modal.Content>
+            <Input fluid value={this.state.key} onChange={this.setKey.bind(this)} />
+          </Modal.Content>
+          <Modal.Actions>
+            <Button icon='check' content='OK' onClick={d({ type: 'set_key', value: this.state.key })} />
+          </Modal.Actions>
+        </Modal>
+      );
+    }
+  }
+}
+
+
+////// Main app view
 
 class App extends Component {
   constructor(props) {
@@ -233,11 +353,12 @@ class App extends Component {
       return () => this.props.d(action);
     }
     
+    // Sorted lists of MealItems and NoteItems
     var mealItems = sortedMeals(this.props.model).map((meal) => 
       <MealItem meal={meal}
                 key={meal.id.toString()}
                 d={d} />);
-    var noteItems = currentDay(this.props.model).notes.map((note) => 
+    var noteItems = sortedNotes(this.props.model).map((note) => 
       <NoteItem note={note} 
                 key={note.id.toString()}
                 d={d} />);
@@ -247,13 +368,24 @@ class App extends Component {
         { currentMeal(this.props.model) !== null &&
           <Meal meal={currentMeal(this.props.model)} 
                 allIngredients={allIngredients(this.props.model)} 
+                message={this.props.model.state.message}
+                d={d} /> }
+        { currentNote(this.props.model) !== null &&
+          <Note note={currentNote(this.props.model)} 
+                message={this.props.model.state.message}
                 d={d} /> }
 
-        
-        <Button icon="left arrow" 
+        <MessageHandler message={this.props.model.state.message} d={d} />      
+        <APIKeyInput apikey={this.props.model.apikey} d={d} />
+      
+        <Button icon="double angle left" 
+          onClick={d({ type: 'view_first_day' })} />
+        <Button icon="angle left" 
           onClick={d({ type: 'view_previous_day' })} />
-        <Button icon="right arrow"
+        <Button icon="angle right"
           onClick={d({ type: 'view_next_day' })} />
+        <Button icon="double angle right"
+          onClick={d({ type: 'view_last_day' })} />
         
         <Header as='h1'>
           { format(currentDay(this.props.model).date, 'ddd, MMM DD') }
@@ -273,7 +405,8 @@ class App extends Component {
         <List relaxed>
           {noteItems}
         </List>
-        <Button icon labelPosition='right'>
+        <Button icon labelPosition='right'
+                onClick={d({ type: 'new_note' })}>
           Add Note
           <Icon name='plus' />
         </Button>
