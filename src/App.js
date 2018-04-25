@@ -112,7 +112,7 @@ class Meal extends Component {
 
             <Modal.Description>
               <MessageHandler message={this.props.message} d={d} />        
-              <Header>Ingredients:</Header>
+              <Header>Ingrédients:</Header>
                 <Dropdown 
                   selection
                   placeholder='Enter Ingredients'
@@ -126,10 +126,10 @@ class Meal extends Component {
               <Form>
               
                 <Header>Photo:</Header>
-                <Input type="file" name="fileToUpload" id="fileToUpload" accept="image/*" 
-                  
+                <input type="file" name="fileToUpload" id="fileToUpload" accept="image/*" 
+                  capture="camera"
                   onChange={updatePhoto}/>
-                <Header>Other Notes:</Header>
+                <Header>Autres Notes:</Header>
                 <TextArea 
                   autoHeight 
                   placeholder='Other notes...' 
@@ -142,7 +142,7 @@ class Meal extends Component {
           </Modal.Content>
           <Modal.Actions>
             <Button color='red' onClick={this.setModalOpen.bind(this)}>
-              <Icon name='trash' /> Delete
+              <Icon name='trash' /> Effacer
             </Button>
             <Modal 
               open={this.state.modalOpen}
@@ -162,7 +162,7 @@ class Meal extends Component {
               </Modal.Actions>
             </Modal>
             <Button color='green' onClick={d({ type: 'finish_meal' })}>
-              <Icon name='check' /> Finish
+              <Icon name='check' /> Terminer
             </Button>
           </Modal.Actions>
         </Modal>
@@ -198,7 +198,7 @@ class Note extends Component {
     
     return (
       <Modal open={true}  style={inlineStyle.modal}>
-        <Modal.Header>Record Your Symptoms
+        <Modal.Header>Décrivez Tes Symptômes
           <Header.Subheader>
             <Flatpickr data-enable-time data-no-calendar data-time_24hr
               value={dateFromTime(this.props.note.time)}
@@ -227,7 +227,7 @@ class Note extends Component {
         </Modal.Content>
         <Modal.Actions>
         <Button color='red' onClick={this.setModalOpen.bind(this)}>
-          <Icon name='trash' /> Delete
+          <Icon name='trash' /> Effacer
         </Button>
         <Modal 
           open={this.state.modalOpen}
@@ -247,7 +247,7 @@ class Note extends Component {
           </Modal.Actions>
         </Modal>
         <Button color='green' onClick={d({ type: 'finish_note' })}>
-          <Icon name='check' /> Finish
+          <Icon name='check' /> Terminer
         </Button>
       </Modal.Actions>
     </Modal>
@@ -263,7 +263,7 @@ function MealItem(props) {
   
   return (
     <List.Item onClick={d({ type: 'view_meal', id: props.meal.id })}>
-      <List.Icon name='utensils' size='large' verticalAlign='middle' />
+      <List.Icon name='food' size='large' verticalAlign='middle' />
       <List.Content>
         <List.Header as='a'>{props.meal.name}</List.Header>
         <List.Description as='a'>
@@ -293,7 +293,6 @@ function NoteItem(props) {
 
 function MessageHandler(props) {
   var d = props.d;
-  console.log(d);
   
   if (props.message === null) {
     return null;
@@ -391,26 +390,25 @@ class App extends Component {
           { format(currentDay(this.props.model).date, 'ddd, MMM DD') }
         </Header>
         
-        <Header as='h2'>Meals</Header>
+        <Header as='h2'>Repas</Header>
         <List relaxed>
           {mealItems}
         </List>
         <Button icon labelPosition='right'
                 onClick={d({ type: 'new_meal' })}>
-          Add Meal
+          Ajouter un Repas
           <Icon name='plus' />
         </Button>
 
-        <Header as='h2'>Allergy Notes</Header>
+        <Header as='h2'>{"Notes d'Allergie"}</Header>
         <List relaxed>
           {noteItems}
         </List>
         <Button icon labelPosition='right'
                 onClick={d({ type: 'new_note' })}>
-          Add Note
+          Ajouter une Note
           <Icon name='plus' />
         </Button>
-
       </Container>
     );
   }

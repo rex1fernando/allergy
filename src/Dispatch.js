@@ -12,7 +12,6 @@ export default class Dispatch {
 
   constructor() {
     this.persist = new Persist();
-    console.log(this.persist);
     this.persist.retrieveModel().then((model) => {
       this.model = model;
       ReactDOM.render(
@@ -31,7 +30,6 @@ export default class Dispatch {
       document.getElementById('root'));
     this.persist.modelUpdated(oldModel, this.model, action).then((newModel) => {
       this.model = newModel;
-      console.log(this.model);
       ReactDOM.render(
         <App model={this.model}
                  d={this.dispatch.bind(this)} />,

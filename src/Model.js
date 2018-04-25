@@ -42,62 +42,77 @@ function timeEQ(t1, t2) {
 function defaultDay() {
   return { 
     date: new Date(),
-    meals: [],
-    mealsCounter: 0,
-    notes: [],
-    notesCounter: 0
+    meals: {},
+    notes: {},
   }
 }
+
+// export function defaultModel() {
+//   return {
+//     data: {
+//       days: [
+//         { 
+//           date: new Date(2018,3,21,0,0,0),
+//           meals: {
+//             0: {
+//               id: 0,
+//               name: 'Breakfast',
+//               time: time(7, 15),
+//               ingredients: ['oats'],
+//               photo: null,
+//               notes: ''
+//             },
+//           },
+//           notes: {
+//             0: {
+//               id: 0,
+//               time: time(1, 15),
+//               itch: 0,
+//               text: ''
+//             }
+//           },
+//         },
+//         { 
+//           date: new Date(2018,3,22,0,0,0),
+//           meals: {
+//             0: {
+//               id: 1,
+//               name: 'Breakfast',
+//               time: time(7, 16),
+//               ingredients: ['oats'],
+//               photo: null,
+//               notes: ''
+//             },
+//           },
+//           notes: {
+//             0: {
+//               id: 1,
+//               time: time(1, 15),
+//               itch: 5,
+//               text: ''
+//             }
+//           },
+//         }
+//       ],
+//       mealsCounter: 2,
+//       notesCounter: 2
+//     },
+//     state: {
+//       currentDay: 0,
+//       currentMeal: null,
+//       currentNote: null,
+//       message: null
+//     },
+//     apikey: null
+//   }  
+// }
 
 export function defaultModel() {
   return {
     data: {
-      days: [
-        { 
-          date: new Date(2018,3,21,0,0,0),
-          meals: {
-            0: {
-              id: 0,
-              name: 'Breakfast',
-              time: time(7, 15),
-              ingredients: ['oats'],
-              photo: null,
-              notes: ''
-            },
-          },
-          notes: {
-            0: {
-              id: 0,
-              time: time(1, 15),
-              itch: 0,
-              text: ''
-            }
-          },
-        },
-        { 
-          date: new Date(2018,3,22,0,0,0),
-          meals: {
-            0: {
-              id: 1,
-              name: 'Breakfast',
-              time: time(7, 16),
-              ingredients: ['oats'],
-              photo: null,
-              notes: ''
-            },
-          },
-          notes: {
-            0: {
-              id: 1,
-              time: time(1, 15),
-              itch: 5,
-              text: ''
-            }
-          },
-        }
-      ],
-      mealsCounter: 2,
-      notesCounter: 2
+      days: [],
+      mealsCounter: 0,
+      notesCounter: 0
     },
     state: {
       currentDay: 0,
@@ -127,7 +142,10 @@ function decrement(i) { return i - 1; }
 
 export function currentDayModified(model) {
   var days = model.data.days;
-  if (model.state.currentDay === days.length) {
+
+  if (days.length === 0) {
+    return false;
+  } else if (model.state.currentDay === days.length) {
     var today = new Date();
     return isSameDay(days[days.length - 1].date, today);
   } else {
@@ -137,8 +155,13 @@ export function currentDayModified(model) {
 
 export function todayModified(model) {
   var days = model.data.days;
-  var today = new Date();
-  return isSameDay(days[days.length - 1].date, today);
+  
+  if (days.length === 0) {
+    return false;
+  } else {
+    var today = new Date();
+    return isSameDay(days[days.length - 1].date, today);
+  }
 }
 
 export function decrementCurrentDay(model) {
@@ -159,6 +182,18 @@ export function incrementCurrentDay(model) {
     return model;
   } else {
     return u({ state: {currentDay: increment} }, model);
+  }
+}
+
+export function gotoFirstDay(model) {
+    return u({ state: {currentDay: 0} }, model);
+}
+
+export function gotoLastDay(model) {
+  if (todayModified(model)) {
+    return u({ state: {currentDay: model.data.days.length-1} }, model);
+  } else {
+    return u({ state: {currentDay: model.data.days.length} }, model);
   }
 }
 
@@ -201,10 +236,10 @@ export function sortedMeals(model) {
 export function newMeal(model) {
   var meal = {
     id: model.data.mealsCounter,
-    name: 'New Meal',
+    name: intelligentName(model),
     time: time(new Date()),
     ingredients: [],
-    picture: null,
+    photo: null,
     notes: ''
   };
   
@@ -305,4 +340,22 @@ function updateCurrentNote(model, updatedNote) {
 
 export function setCurrentNoteField(model, field, value) {
   return updateCurrentNote(model, u.updateIn(field, value, currentNote(model)));
+}
+
+function intelligentName(model) {
+  var mealTitles = currentDayMeals(model).map((meal) => meal.name);
+  var hour = new Date().getHours();
+  if (hour <= 4 && !mealTitles.includes('Snack de Minuit')) {
+    return 'Snack de Minuit';
+  } else if (hour > 4 && hour <= 10 && !mealTitles.includes('Petit-Déjeuner')) {
+    return 'Petit-Déjeuner';
+  } else if (hour > 10 && hour <= 13 && !mealTitles.includes('Déjeuner')) {
+    return 'Déjeuner';
+  } else if (hour > 13 && hour <= 17 && !mealTitles.includes("Goûter de l'Après-Midi")) {
+    return "Goûter de l'Après-Midi";
+  } else if (hour > 17 && !mealTitles.includes('Dîner')) {
+    return 'Dîner';
+  } else {
+    return 'Nouveau Repas';
+  }
 }

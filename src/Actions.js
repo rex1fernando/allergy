@@ -3,7 +3,7 @@ import { incrementCurrentDay, decrementCurrentDay,
          setCurrentMealField, deleteCurrentMeal,
          newNote, deleteCurrentNote,
          setCurrentNote, setCurrentNoteField, reportError,
-         setAPIKey, setMessage } from './Model'
+         setAPIKey, setMessage, gotoFirstDay, gotoLastDay } from './Model'
 
 var possibleActions = [
   // main screen
@@ -41,6 +41,10 @@ export function update(model, action) {
       return decrementCurrentDay(model);    
     case 'view_next_day':
       return incrementCurrentDay(model);
+    case 'view_first_day':
+      return gotoFirstDay(model);    
+    case 'view_last_day':
+      return gotoLastDay(model);
     case 'new_meal':
       return newMeal(model);
     case 'view_meal':

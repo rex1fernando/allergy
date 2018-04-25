@@ -94,17 +94,22 @@ export class Persist {
     } else if (action.type === 'view_meal') {
       return this.linkToPhoto(model, action.id).then(this.tryPersist.bind(this));
     } else if (action.type === 'finish_meal') {
-      return this.photoToLink(model, currentMeal(oldModel).id).then(this.tryPersist.bind(this)).then(this.firebaseTryPut.bind(this));
+      return this.photoToLink(model, currentMeal(oldModel).id).then(this.tryPersist.bind(this), true);
     } else if (   action.type === 'update_meal_name' || action.type === 'update_meal_notes' ||
                   action.type === 'update_note_text'){
       this.tryPersist(model);
       return Promise.resolve(model);
+    } else if (action.type === 'new_meal' || action.type === 'new_note' ||
+                  action.type === 'delete_meal' || action.type == 'delete_note') {
+      return this.tryPersist(model, true);            
     } else {
+    
       return this.tryPersist(model);
     }
   }
   
-  tryPersist(model) {
+  tryPersist(model, toFirebase) {
+    if (toFirebase) this.firebaseTryPut(model);
     return localForage.setItem('store', model).catch(function(err) {
       console.log(err);
       return reportError(model, 'tryPersist failed', 'Talk to Rex. Sorry!');
