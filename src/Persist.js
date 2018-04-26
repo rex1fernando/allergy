@@ -1,39 +1,25 @@
 import localForage from "localforage";
-import u from 'updeep';
 import firebase from 'firebase';
 import 'firebase/firestore';
 import 'firebase/storage';
 
-import { currentMeal, defaultModel, reportError,
-         setCurrentMealField, currentDay, setCurrentMeal } from './Model';
+import { LocalPersistError, FirebasePutError, 
+  FirebaseInitializationError, PhotoCacheError } from './Errors'
+import { defaultModel, setCurrentMealField, currentMeal, currentDay, setMealField } from './Model';
 
- //**dataURL to blob**
- function dataURLtoBlob(dataurl) {
-     var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-         bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-     while(n--){
-         u8arr[n] = bstr.charCodeAt(n);
-     }
-     return new Blob([u8arr], {type:mime});
- }
 
- //**blob to dataURL**
- function blobToDataURL(blob, callback) {
-     var a = new FileReader();
-     a.onload = function(e) {callback(e.target.result);}
-     a.readAsDataURL(blob);
- }
-
-function first(p) {
-  p.then((a) => a[0]);
-}
 
 export class Persist {
-  
-  startFirebase(key) {
+  constructor() {
+    this.persistLocally = this.createPersistAction(this.persistLocallyR);
+    this.writeToFirebase = this.createPersistAction(this.writeToFirebaseR);
+    this.cacheInPhoto = this.createPersistAction(this.cacheInPhotoR);
+    this.cacheOutPhoto = this.createPersistAction(this.cacheOutPhotoR);
+    this.initializeFirebase = this.createPersistAction(this.initializeFirebaseR)
+
     // Initialize Firebase
     var config = {
-      apiKey: key,
+      apiKey: 'AIzaSyAA4F74AVVT_XUPkGCZwluAJSHTmaR0xV8',
       authDomain: "elodie-allergy.firebaseapp.com",
       databaseURL: "https://elodie-allergy.firebaseio.com",
       projectId: "elodie-allergy",
@@ -45,108 +31,185 @@ export class Persist {
     this.storage = firebase.storage();
   }
   
-  firebaseTryGet(model) {
-    var docRef = this.db.collection("store").doc("store");
-    
-    return docRef.get().then(function(doc) {
-      if (doc.exists) {
-        return doc.data();
-      } else {
-        return model;
-      }
-    }).catch(function(err) {
-      console.log(err);
-      return reportError(model, "Error getting from Firebase", 'Talk to Rex. Sorry!');
-    });
+  createPersistAction(f) {
+    var fb = f.bind(this);
+    return function(params) {
+      return fb(params.update).then(function(newActions) {
+        return { update: params.update, actions: params.actions.concat(newActions) };
+      });
+    }
   }
   
-  firebaseTryPut(model) {
-    var docRef = this.db.collection("store").doc("store");
+  savePhotoToFirebase(mealID, photo) {
+    var ref = this.storage.ref().child('images/'+mealID);
+    return ref.putString(photo);
+  }
+  loadPhotoFromFirebase(mealID, photo) {
+    throw Error("loading photos from firebase not supported");
+  }
+  
+  initializeFirebaseR(update) {
+    var key = update.action.value;
     
-    return docRef.set(model).then(function() {
-      return model;
+
+    return firebase.auth().signInWithEmailAndPassword('email@email.com', key).then(function() {
+      return [{ type: 'notify_firebase_connected' }];
     }).catch(function(err) {
-      console.log(err);
-      return reportError(model, "Error putting to Firebase", 'Talk to Rex. Sorry!');
+      throw new FirebaseInitializationError(err);
     });
   }
   
   retrieveModel() {
     return localForage.getItem('store').then(function(value) {
-      if (value === null || value === undefined) {
+      if (value===null || value===undefined) {
         return defaultModel();
       } else {
         if (value.apikey !== null && value.apikey !== undefined) {
-          this.startFirebase(value.apikey);
+          return this.initializeFirebaseR({ action: {value: value.apikey}}).then(function() {
+            return value;
+          })
+        } else { 
+          return value;
         }
-        return value;
+        
       }
     }.bind(this)).catch(function(err) {
-      console.log(err);
-      return reportError(defaultModel(), 'retrieveModel failed', 'Talk to Rex. Sorry!');
+      return defaultModel();
     });
   }
   
-  modelUpdated(oldModel, model, action) {    
-    if (action.type === 'set_key') {
-      this.startFirebase();
-      return this.tryPersist(model);
-    } else if (action.type === 'view_meal') {
-      return this.linkToPhoto(model, action.id).then(this.tryPersist.bind(this));
-    } else if (action.type === 'finish_meal') {
-      return this.photoToLink(model, currentMeal(oldModel).id).then(this.tryPersist.bind(this), true);
-    } else if (   action.type === 'update_meal_name' || action.type === 'update_meal_notes' ||
-                  action.type === 'update_note_text'){
-      this.tryPersist(model);
-      return Promise.resolve(model);
-    } else if (action.type === 'new_meal' || action.type === 'new_note' ||
-                  action.type === 'delete_meal' || action.type == 'delete_note') {
-      return this.tryPersist(model, true);            
-    } else {
+  
+  ////// logic
+  
+  handleFirebasePush(currentData, firebaseData) {
+    this.firebaseTimestamp = firebaseData.timestamp;
     
-      return this.tryPersist(model);
+    if (currentData.timestamp < firebaseData.timestamp) {
+      return [{ type: 'replace_data', value: firebaseData },
+              { type: 'set_last_synced', value: new Date() }];
+    } else {
+      return [];
     }
   }
   
-  tryPersist(model, toFirebase) {
-    if (toFirebase) this.firebaseTryPut(model);
-    return localForage.setItem('store', model).catch(function(err) {
-      console.log(err);
-      return reportError(model, 'tryPersist failed', 'Talk to Rex. Sorry!');
-    })
+  
+  hackForPhotoLinks(update) {
+    if (update.action.type === 'finish_meal') {
+      var meal = currentMeal(update.oldModel);
+      var dayId = update.oldModel.state.currentDay;
+
+      update.newModel = setMealField(update.newModel, dayId, meal.id, 'photo', 'link');
+    }
+    return update.newModel;
   }
   
-  linkToPhoto(model, mealID) {
-    if (currentMeal(model).photo !== 'link') 
-      return Promise.resolve(model);
-    return localForage.getItem(mealID).then(function(value) {
-      return setCurrentMealField(model, 'photo', value)
+  handleUpdate(update) {
+    // update = { oldModel:, newModel:, action: }
+    var action = update.action;
+    
+    var params = {update: update, actions: [] }
+    
+    if (action.type == 'set_key') {
+      return this.persistLocally(params).then(this.initializeFirebase);
+    }
+    // default case: persist locally
+    else if (action.type !== 'new_meal'    && action.type !== 'new_note' && 
+        action.type !== 'delete_meal' && action.type !== 'delete_note' && 
+        action.type !== 'finish_meal' && action.type !== 'finish_note' &&
+        action.type !== 'view_meal') {
+      return this.persistLocally(params);
+    }
+    
+    // "important" cases (new meal/note, delete meal/note, view meal, finish meal/note):
+    //      - persist locally, then write to firebase
+    //      - for view/finish meal, cache photo
+    else if (action.type !== 'view_meal' && action.type !== 'finish_meal') {
+      return this.persistLocally(params).then(this.writeToFirebase);
+    } else if (action.type === 'view_meal') {
+      return this.cacheInPhoto(params).then(this.persistLocally);
+    } else if (action.type === 'finish_meal') {
+      return this.cacheOutPhoto(params).then(this.persistLocally).then(this.writeToFirebase);
+    }
+  }
+  
+  persistLocallyR(update) {
+    // if we are finishing meal, don't save photo
+    if (update.action.type === 'finish_meal') {
+      var meal = currentMeal(update.oldModel);
+      var dayId = update.oldModel.state.currentDay;
+
+      update.newModel = setMealField(update.newModel, dayId, meal.id, 'photo', 'link');
+    }
+    
+    return localForage.setItem('store', update.newModel).then(function() {
+      return [];
     }).catch(function(err) {
-      console.log(err);
-      return reportError(model, 'linkToPhoto failed', 'Talk to Rex. Sorry!');
+      throw new LocalPersistError(err);
     });
   }
   
-  photoToLink(model, mealID) {
-    var meal = currentDay(model).meals[mealID];
-    model = setCurrentMeal(model, mealID);
-    if (meal.photo === null) {
-      return Promise.resolve(setCurrentMeal(model, null));
+  writeToFirebaseR(update) {
+    // get latest firebase version date (store when receiving push)
+    // if our update is a later version, push data section to firebase
+    // else, do nothing
+    //   - Handle photo cache in/out
+    if (update.newModel.data.timestamp <= this.firebaseTimestamp) {
+      return Promise.resolve([]);
+    } else {
+      // if we are finishing meal, don't save photo in firebase
+      if (update.action.type === 'finish_meal') {
+        var dayId = update.oldModel.state.currentDay;
+        var meal = currentMeal(update.oldModel);
+        update.newModel = setMealField(update.newModel, dayId, meal.id, 'photo', 'link');
+      }
+      
+      var day = new Date().getDate();
+      var docRef = this.db.collection("store").doc(day.toString());      
+      return docRef.set(update.newModel.data).then(function() {
+        if (update.action.type !== 'finish_meal'){
+          return [{ type: 'set_last_synced', value: update.newModel.data.timestamp }];
+        } else {
+          var meal = currentMeal(update.oldModel);
+          return this.savePhotoToFirebase(meal.id, meal.photo).then(function() {
+            return [{ type: 'set_last_synced', value: update.newModel.data.timestamp }];
+          });
+        }
+      }.bind(this)).catch(function(err) {
+        throw new FirebasePutError(err);
+      });
     }
-    return localForage.setItem(mealID, meal.photo).then(function (value) {
-      this.photoToFirebase(mealID, meal.photo);
-      model = setCurrentMealField(model, 'photo', 'link');
-      return setCurrentMeal(model, null);
-    }.bind(this)).catch(function(err) {
-      console.log(err);
-      return reportError(model, 'photoToLink failed', 'Talk to Rex. Sorry!');
+  }
+  
+  cacheInPhotoR(update) {
+    var meal = currentMeal(update.newModel);
+    if (meal.photo !== 'link') {
+      return Promise.resolve([]);
+    }
+    return localForage.getItem(meal.id).then(function(value) {
+      if (value !== null) { 
+        return [{ type: 'update_meal_photo', value: value }];
+      } else {
+        return this.loadPhotoFromFirebase(meal.id).then(function(value) {
+          return [{ type: 'update_meal_photo', value: value }];
+        })
+      }
+    }).catch(function(err) {
+      throw PhotoCacheError(err);
     });
   }
   
-  photoToFirebase(mealID, photo) {
-    var ref = this.storage.ref().child('images/'+mealID);
-    ref.putString(photo).catch(function(err) {
-      console.log(err);
-    });
+  cacheOutPhotoR(update) {
+    var dayId  = update.oldModel.state.currentDay;
+    var meal = currentMeal(update.oldModel);
+    if (meal.photo === null) {
+      return Promise.resolve([]);
+    } else {
+      return localForage.setItem(meal.id, meal.photo).then(function () {
+        return [{ type: 'update_meal_photo_id', day_id: dayId, id: meal.id, value: "link" }];
+
+      }).catch(function(err) {
+        throw PhotoCacheError(err);
+      });
+    }
   }
 }

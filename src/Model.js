@@ -110,7 +110,11 @@ function defaultDay() {
 export function defaultModel() {
   return {
     data: {
-      days: [],
+      days: [{
+        date: new Date(2018, 3, 25, 0, 0, 0),
+        meals: {},
+        notes: {},
+      }],
       mealsCounter: 0,
       notesCounter: 0
     },
@@ -124,8 +128,16 @@ export function defaultModel() {
   }  
 }
 
+export function updateTimestamp(model) {
+  return u.updateIn('data.timestamp', new Date(), model);
+}
+
 export function setAPIKey(model, key) {
   return u({ apikey: key }, model);
+}
+
+export function setLastSynced(model, date) {
+  return u.updateIn('state.lastSynced', date, model);
 }
 
 export function currentDay(model) {
@@ -271,8 +283,18 @@ function updateCurrentMeal(model, updatedMeal) {
   return updateCurrentDay(model, dayWithUpdatedMeal);
 }
 
+function updateCurrentDayMeal(model, id, updatedMeal) {
+  var dayWithUpdatedMeal = u.updateIn('meals.'+id, updatedMeal, currentDay(model));
+  return updateCurrentDay(model, dayWithUpdatedMeal);
+}
+
 export function setCurrentMealField(model, field, value) {
   return updateCurrentMeal(model, u.updateIn(field, value, currentMeal(model)));
+}
+
+export function setMealField(model, day_id, id, field, value) {
+  var newModel = u.updateIn('data.days.'+day_id+'.meals.'+id+'.'+field, value, model);
+  return newModel;
 }
 
 export function allIngredients(model) {

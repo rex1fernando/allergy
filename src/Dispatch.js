@@ -2,14 +2,14 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import App from './App';
-import { initializeModel, setCurrentMealField, reportError } from './Model';
+import { initializeModel, reportError } from './Model';
 import { Persist } from './Persist';
 import { update } from './Actions';
+import { handleError } from './Errors';
+
 import u from 'updeep';
 
 export default class Dispatch {
-  
-
   constructor() {
     this.persist = new Persist();
     this.persist.retrieveModel().then((model) => {
@@ -22,26 +22,37 @@ export default class Dispatch {
   }
   
   dispatch(action) {
+    // update and rerender immediately
     var oldModel = this.model;
     this.model = update(this.model, action);
+    var newModel = this.model;
+    this.model = this.persist.hackForPhotoLinks({ oldModel: oldModel, newModel: newModel, action: action });
+    
     ReactDOM.render(
       <App model={this.model}
                d={this.dispatch.bind(this)} />,
       document.getElementById('root'));
-    this.persist.modelUpdated(oldModel, this.model, action).then((newModel) => {
-      this.model = newModel;
-      ReactDOM.render(
-        <App model={this.model}
-                 d={this.dispatch.bind(this)} />,
-        document.getElementById('root'));
-    }).catch((err) => {
-      console.log(err);
-      this.model = reportError(this.model, 'Error in dispatch.', 'Talk to Rex. Sorry!')
-      console.log(this.model);
-      ReactDOM.render(
-        <App model={this.model}
-                 d={this.dispatch.bind(this)} />,
-        document.getElementById('root'));
-    });    
+      
+    // notify Persist that we updated
+    this.persist.handleUpdate(
+      { oldModel: oldModel, newModel: newModel, action: action }
+    ).then(function(params) {
+      // handle the actions that Persist returned
+      return this.persistDispatch(params.actions);
+    }.bind(this)).catch(function(err) {
+      return this.persistDispatch(handleError(err));
+    }.bind(this));
+  }
+  
+  persistDispatch(actions) {
+    // apply all actions
+    this.model = actions.reduce((model, action) => {
+      return update(model, action);
+    }, this.model);
+    
+    ReactDOM.render(
+      <App model={this.model}
+               d={this.dispatch.bind(this)} />,
+      document.getElementById('root'));
   }
 }

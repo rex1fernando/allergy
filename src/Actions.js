@@ -3,7 +3,8 @@ import { incrementCurrentDay, decrementCurrentDay,
          setCurrentMealField, deleteCurrentMeal,
          newNote, deleteCurrentNote,
          setCurrentNote, setCurrentNoteField, reportError,
-         setAPIKey, setMessage, gotoFirstDay, gotoLastDay } from './Model'
+         setAPIKey, setMessage, gotoFirstDay, gotoLastDay, setLastSynced,
+         setMealField, updateTimestamp } from './Model'
 
 var possibleActions = [
   // main screen
@@ -30,6 +31,9 @@ var possibleActions = [
 
 
 export function update(model, action) {
+  model = updateTimestamp(model);
+
+  
   switch (action.type) {    
     case 'set_key':
       return setAPIKey(model, action.value);
@@ -61,6 +65,8 @@ export function update(model, action) {
       return setCurrentMealField(model, 'ingredients', action.value);
     case 'update_meal_photo':
       return setCurrentMealField(model, 'photo', action.value);
+    case 'update_meal_photo_id':
+      return setMealField(model, action.day_id, action.id, 'photo', action.value);
     case 'update_meal_notes':
       return setCurrentMealField(model, 'notes', action.value);
       
@@ -78,9 +84,15 @@ export function update(model, action) {
       return setCurrentNoteField(model, 'itch', action.value);
     case 'update_note_text':
       return setCurrentNoteField(model, 'text', action.value);
-
+    
+    case 'report_error':
+      return reportError(model, action.title, action.text);
+    case 'set_last_synced':
+      return setLastSynced(model, action.value);
+    case 'notify_firebase_connected':
+      return model;
       
     default:
-      return reportError(model, 'Unkown Action', 'Talk to Rex. Sorry!');
+      return reportError(model, 'Unkown Action: '+action.type, 'Talk to Rex. Sorry!');
   }
 }

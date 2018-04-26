@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { Button, Header, List, Modal,
          Image as SImage, Form, TextArea, Icon,
          Input, Container, Label, 
-         Dropdown, Message } from 'semantic-ui-react'
+         Dropdown, Message, Divider } from 'semantic-ui-react'
 import Flatpickr from 'react-flatpickr'
 import Slider from 'rc-slider';
 import ReactTags from 'react-tag-autocomplete'
@@ -328,6 +328,7 @@ class APIKeyInput extends Component {
         <Modal open={true} style={inlineStyle.modal}>
           <Modal.Header>Please enter your key</Modal.Header>
           <Modal.Content>
+            <MessageHandler message={this.props.message} d={d} />      
             <Input fluid value={this.state.key} onChange={this.setKey.bind(this)} />
           </Modal.Content>
           <Modal.Actions>
@@ -373,9 +374,9 @@ class App extends Component {
           <Note note={currentNote(this.props.model)} 
                 message={this.props.model.state.message}
                 d={d} /> }
-
+        
         <MessageHandler message={this.props.model.state.message} d={d} />      
-        <APIKeyInput apikey={this.props.model.apikey} d={d} />
+        <APIKeyInput apikey={this.props.model.apikey} message={this.props.model.state.message} d={d} />
       
         <Button icon="double angle left" 
           onClick={d({ type: 'view_first_day' })} />
@@ -409,6 +410,10 @@ class App extends Component {
           Ajouter une Note
           <Icon name='plus' />
         </Button>
+        
+        <Divider />
+        {this.props.model.state.lastSynced &&
+         <p>Last synced: {format(this.props.model.state.lastSynced, 'ddd, MMM DD HH:mm:ss')}. Version 2.</p>}
       </Container>
     );
   }
