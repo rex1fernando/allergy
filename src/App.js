@@ -412,8 +412,10 @@ class App extends Component {
         </Button>
         
         <Divider />
-        {this.props.model.state.lastSynced &&
-         <p>Last synced: {format(this.props.model.state.lastSynced, 'ddd, MMM DD HH:mm:ss')}. Version 2.</p>}
+        
+        <p>{this.props.model.state.lastSynced &&
+         <span>Last synced: {format(this.props.model.state.lastSynced, 'ddd, MMM DD HH:mm:ss')}. </span>}Version 3.</p>
+         
       </Container>
     );
   }

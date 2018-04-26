@@ -90,7 +90,7 @@ export function update(model, action) {
     case 'set_last_synced':
       return setLastSynced(model, action.value);
     case 'notify_firebase_connected':
-      return model;
+      return setMessage(model, null);
       
     default:
       return reportError(model, 'Unkown Action: '+action.type, 'Talk to Rex. Sorry!');

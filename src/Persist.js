@@ -41,6 +41,9 @@ export class Persist {
   }
   
   savePhotoToFirebase(mealID, photo) {
+    if (!window.navigator.onLine) {
+      return Promise.resolve();
+    }
     var ref = this.storage.ref().child('images/'+mealID);
     return ref.putString(photo);
   }
@@ -49,13 +52,20 @@ export class Persist {
   }
   
   initializeFirebaseR(update) {
-    var key = update.action.value;
+    if (!window.navigator.onLine) {
+      return Promise.resolve([]);
+    }
     
-
+    var key = update.action.value;
     return firebase.auth().signInWithEmailAndPassword('email@email.com', key).then(function() {
       return [{ type: 'notify_firebase_connected' }];
     }).catch(function(err) {
-      throw new FirebaseInitializationError(err);
+      if (err.code === 'auth/wrong-password') {
+        return [{ type: 'report_error', title: 'Please try again', text: 'Your key was incorrect.' },
+                { type: 'set_key', value: null }];
+      } else { 
+        throw new FirebaseInitializationError(err);
+      }
     });
   }
   
@@ -64,17 +74,11 @@ export class Persist {
       if (value===null || value===undefined) {
         return defaultModel();
       } else {
-        if (value.apikey !== null && value.apikey !== undefined) {
-          return this.initializeFirebaseR({ action: {value: value.apikey}}).then(function() {
-            return value;
-          })
-        } else { 
-          return value;
-        }
-        
-      }
+        return value;
+      }    
     }.bind(this)).catch(function(err) {
-      return defaultModel();
+      alert("Something serious went wrong. Talk to Rex.");
+      throw new Error();
     });
   }
   
@@ -92,13 +96,18 @@ export class Persist {
     }
   }
   
+  removePhotoFromMeal(update) {
+    var meal = currentMeal(update.oldModel);
+    var dayId = update.oldModel.state.currentDay;
+
+    if (meal.photo !== null) { 
+      update.newModel = setMealField(update.newModel, dayId, meal.id, 'photo', 'link');
+    }
+  }
   
   hackForPhotoLinks(update) {
     if (update.action.type === 'finish_meal') {
-      var meal = currentMeal(update.oldModel);
-      var dayId = update.oldModel.state.currentDay;
-
-      update.newModel = setMealField(update.newModel, dayId, meal.id, 'photo', 'link');
+      this.removePhotoFromMeal(update);
     }
     return update.newModel;
   }
@@ -135,10 +144,7 @@ export class Persist {
   persistLocallyR(update) {
     // if we are finishing meal, don't save photo
     if (update.action.type === 'finish_meal') {
-      var meal = currentMeal(update.oldModel);
-      var dayId = update.oldModel.state.currentDay;
-
-      update.newModel = setMealField(update.newModel, dayId, meal.id, 'photo', 'link');
+      this.removePhotoFromMeal(update);
     }
     
     return localForage.setItem('store', update.newModel).then(function() {
@@ -149,6 +155,9 @@ export class Persist {
   }
   
   writeToFirebaseR(update) {
+    if (!window.navigator.onLine) {
+      return Promise.resolve([]);
+    }
     // get latest firebase version date (store when receiving push)
     // if our update is a later version, push data section to firebase
     // else, do nothing
@@ -158,22 +167,13 @@ export class Persist {
     } else {
       // if we are finishing meal, don't save photo in firebase
       if (update.action.type === 'finish_meal') {
-        var dayId = update.oldModel.state.currentDay;
-        var meal = currentMeal(update.oldModel);
-        update.newModel = setMealField(update.newModel, dayId, meal.id, 'photo', 'link');
+        this.removePhotoFromMeal(update);
       }
       
       var day = new Date().getDate();
       var docRef = this.db.collection("store").doc(day.toString());      
       return docRef.set(update.newModel.data).then(function() {
-        if (update.action.type !== 'finish_meal'){
-          return [{ type: 'set_last_synced', value: update.newModel.data.timestamp }];
-        } else {
-          var meal = currentMeal(update.oldModel);
-          return this.savePhotoToFirebase(meal.id, meal.photo).then(function() {
-            return [{ type: 'set_last_synced', value: update.newModel.data.timestamp }];
-          });
-        }
+        return [{ type: 'set_last_synced', value: update.newModel.data.timestamp }];        
       }.bind(this)).catch(function(err) {
         throw new FirebasePutError(err);
       });
@@ -193,8 +193,8 @@ export class Persist {
           return [{ type: 'update_meal_photo', value: value }];
         })
       }
-    }).catch(function(err) {
-      throw PhotoCacheError(err);
+    }.bind(this)).catch(function(err) {
+      throw new PhotoCacheError(err);
     });
   }
   
@@ -204,11 +204,11 @@ export class Persist {
     if (meal.photo === null) {
       return Promise.resolve([]);
     } else {
-      return localForage.setItem(meal.id, meal.photo).then(function () {
-        return [{ type: 'update_meal_photo_id', day_id: dayId, id: meal.id, value: "link" }];
-
+      return Promise.all([localForage.setItem(meal.id, meal.photo),
+                         this.savePhotoToFirebase(meal.id, meal.photo)]).then(function () {
+        return [];
       }).catch(function(err) {
-        throw PhotoCacheError(err);
+        throw new PhotoCacheError(err);
       });
     }
   }

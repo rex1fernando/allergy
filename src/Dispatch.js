@@ -18,6 +18,12 @@ export default class Dispatch {
         <App model={this.model}
                  d={this.dispatch.bind(this)} />,
         document.getElementById('root'));
+      
+      if (this.model.apikey !== null && this.model.apikey !== undefined) {
+        this.dispatch({ type: 'set_key', value: this.model.apikey });
+      }
+    }).catch(function(err) {
+      return;
     });    
   }
   

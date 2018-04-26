@@ -18,8 +18,7 @@ export function handleError(err) {
   
   console.log(err);
   if (err instanceof FirebaseInitializationError) {
-    return [{type: 'report_error', title: 'An error occured', text: err.message + "\nTalk to Rex, sorry!"},
-            {type: 'set_key', value: null}];
+    return [{type: 'report_error', title: 'An error occured', text: err.message + "\nTalk to Rex, sorry!"}];
   } else 
     return [{type: 'report_error', title: 'An error occured', text: err.message + "\nTalk to Rex, sorry!"}];
 }

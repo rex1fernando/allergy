@@ -47,66 +47,6 @@ function defaultDay() {
   }
 }
 
-// export function defaultModel() {
-//   return {
-//     data: {
-//       days: [
-//         { 
-//           date: new Date(2018,3,21,0,0,0),
-//           meals: {
-//             0: {
-//               id: 0,
-//               name: 'Breakfast',
-//               time: time(7, 15),
-//               ingredients: ['oats'],
-//               photo: null,
-//               notes: ''
-//             },
-//           },
-//           notes: {
-//             0: {
-//               id: 0,
-//               time: time(1, 15),
-//               itch: 0,
-//               text: ''
-//             }
-//           },
-//         },
-//         { 
-//           date: new Date(2018,3,22,0,0,0),
-//           meals: {
-//             0: {
-//               id: 1,
-//               name: 'Breakfast',
-//               time: time(7, 16),
-//               ingredients: ['oats'],
-//               photo: null,
-//               notes: ''
-//             },
-//           },
-//           notes: {
-//             0: {
-//               id: 1,
-//               time: time(1, 15),
-//               itch: 5,
-//               text: ''
-//             }
-//           },
-//         }
-//       ],
-//       mealsCounter: 2,
-//       notesCounter: 2
-//     },
-//     state: {
-//       currentDay: 0,
-//       currentMeal: null,
-//       currentNote: null,
-//       message: null
-//     },
-//     apikey: null
-//   }  
-// }
-
 export function defaultModel() {
   return {
     data: {
