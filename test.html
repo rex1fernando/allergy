@@ -29,10 +29,13 @@
   });
   this.db = firebase.firestore();
 
-  firebase.auth().signInWithEmailAndPassword('email@email.com', "pokemon765").then(function() {
+  firebase.auth().signInWithEmailAndPassword('email@email.com', "dfdf").then(function() {
     var user = firebase.auth().currentUser;
     console.log(user.uid);
   }).catch(function(err) {
+    if (err.code === 'auth/wrong-password') {
+      console.log('hhihihih')
+    }
     console.log(err);
   });
 
