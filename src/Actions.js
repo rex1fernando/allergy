@@ -4,7 +4,7 @@ import { incrementCurrentDay, decrementCurrentDay,
          newNote, deleteCurrentNote,
          setCurrentNote, setCurrentNoteField, reportError,
          setAPIKey, setMessage, gotoFirstDay, gotoLastDay, setLastSynced,
-         setMealField, updateTimestamp } from './Model'
+         setMealField, updateTimestamp, setMealPhoto, setData, syncState } from './Model'
 
 var possibleActions = [
   // main screen
@@ -31,16 +31,17 @@ var possibleActions = [
 
 
 export function update(model, action) {
+  // should move all non-data actions here
+  if (action.type === 'set_key') {
+    return setAPIKey(model, action.value);
+  }
+  
   model = updateTimestamp(model);
 
   
   switch (action.type) {    
-    case 'set_key':
-      return setAPIKey(model, action.value);
     case 'reset_message':
       return setMessage(model, null);
-    
-    
     case 'view_previous_day':
       return decrementCurrentDay(model);    
     case 'view_next_day':
@@ -64,9 +65,7 @@ export function update(model, action) {
     case 'update_meal_ingredients':
       return setCurrentMealField(model, 'ingredients', action.value);
     case 'update_meal_photo':
-      return setCurrentMealField(model, 'photo', action.value);
-    case 'update_meal_photo_id':
-      return setMealField(model, action.day_id, action.id, 'photo', action.value);
+      return setMealPhoto(model, action.id, action.value);
     case 'update_meal_notes':
       return setCurrentMealField(model, 'notes', action.value);
       
@@ -91,6 +90,11 @@ export function update(model, action) {
       return setLastSynced(model, action.value);
     case 'notify_firebase_connected':
       return setMessage(model, null);
+      
+    case 'replace_data':
+      return setData(model, action.value);
+    case 'synchronize_state':
+      return syncState(model);
       
     default:
       return reportError(model, 'Unkown Action: '+action.type, 'Talk to Rex. Sorry!');

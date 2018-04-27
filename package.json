@@ -11,6 +11,7 @@
     "date-fns": "^1.29.0",
     "json-date-parser": "^1.0.1",
     "localforage": "^1.7.1",
+    "luxon": "^1.2.0",
     "rc-slider": "^8.6.1",
     "rc-time-picker": "^3.3.1",
     "react": "^16.3.2",

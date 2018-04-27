@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import App from './App';
-import { initializeModel, reportError } from './Model';
 import { Persist } from './Persist';
 import { update } from './Actions';
 import { handleError } from './Errors';
@@ -22,6 +21,11 @@ export default class Dispatch {
       if (this.model.apikey !== null && this.model.apikey !== undefined) {
         this.dispatch({ type: 'set_key', value: this.model.apikey });
       }
+      
+      var phProxy = function(firebaseData) {
+        this.persistDispatch(this.persist.handleFirebasePush(this.model.data, firebaseData));
+      }.bind(this);
+      this.persist.startFirebaseHandler(phProxy);
     }).catch(function(err) {
       return;
     });    
@@ -32,7 +36,6 @@ export default class Dispatch {
     var oldModel = this.model;
     this.model = update(this.model, action);
     var newModel = this.model;
-    this.model = this.persist.hackForPhotoLinks({ oldModel: oldModel, newModel: newModel, action: action });
     
     ReactDOM.render(
       <App model={this.model}
@@ -61,4 +64,6 @@ export default class Dispatch {
                d={this.dispatch.bind(this)} />,
       document.getElementById('root'));
   }
+  
+
 }

@@ -9,8 +9,9 @@ import ReactTags from 'react-tag-autocomplete'
 import { currentDay, sortedMeals,
          currentMeal, allIngredients,
          currentNote, sortedNotes,
-         dateFromTime, time } from './Model'
+         dateFromTime, time, photo } from './Model'
 import { format } from 'date-fns'
+import { DateTime } from 'luxon'
 
 
 import './App.css';
@@ -86,8 +87,8 @@ class Meal extends Component {
           var image = new Image();
           image.addEventListener('load', function() {
             var img = resize(image, 750)
-            d({ type: 'update_meal_photo', value: img })();
-          });
+            d({ type: 'update_meal_photo', id: this.props.meal.id, value: img })();
+          }.bind(this));
           image.src = e.target.result;
         }.bind(this);
               
@@ -97,7 +98,7 @@ class Meal extends Component {
     var updateNotes = (e, data) => {
       d({ type: 'update_meal_notes', value: data.value})();
     }
-    
+    this.photo = photo;
     return (
         <Modal open={true}  style={inlineStyle.modal}>
           <Modal.Header>
@@ -108,7 +109,7 @@ class Meal extends Component {
             </Header.Subheader>
           </Modal.Header>
           <Modal.Content image>
-            <SImage wrapped size='medium' src={this.props.meal.photo} />
+            <SImage wrapped size='medium' src={photo(this.props.model, this.props.meal.id)} />
 
             <Modal.Description>
               <MessageHandler message={this.props.message} d={d} />        
@@ -367,6 +368,7 @@ class App extends Component {
       <Container>
         { currentMeal(this.props.model) !== null &&
           <Meal meal={currentMeal(this.props.model)} 
+                model={this.props.model}
                 allIngredients={allIngredients(this.props.model)} 
                 message={this.props.model.state.message}
                 d={d} /> }
@@ -388,7 +390,9 @@ class App extends Component {
           onClick={d({ type: 'view_last_day' })} />
         
         <Header as='h1'>
-          { format(currentDay(this.props.model).date, 'ddd, MMM DD') }
+          { 
+            DateTime.fromJSDate(currentDay(this.props.model).date).setZone('Europe/Paris').toLocaleString({weekday: 'short', month: 'short', day: '2-digit'}) 
+          }
         </Header>
         
         <Header as='h2'>Repas</Header>
@@ -414,8 +418,7 @@ class App extends Component {
         <Divider />
         
         <p>{this.props.model.state.lastSynced &&
-         <span>Last synced: {format(this.props.model.state.lastSynced, 'ddd, MMM DD HH:mm:ss')}. </span>}Version 3.</p>
-         
+         <span>Last synced: {DateTime.fromJSDate(this.props.model.state.lastSynced).setZone('Europe/Paris').toLocaleString({weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false})}. </span>}Version 4.</p> 
       </Container>
     );
   }

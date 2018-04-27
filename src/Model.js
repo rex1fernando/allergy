@@ -1,7 +1,6 @@
 import isSameDay from 'date-fns/is_same_day'
 import u from 'updeep'
-import localforage from "localforage";
-import { jsonDateParser } from "json-date-parser"
+import { DateTime } from 'luxon'
 
 
 var flatten = function(arr) {
@@ -12,7 +11,7 @@ var flatten = function(arr) {
 
 export function time(h, m) {
   if (arguments.length === 1) { 
-    return {h: h.getHours(), m: h.getMinutes()};
+    return {h: h.hour, m: h.minute};
   } else {
     return {h: h, m: m};
   }
@@ -26,10 +25,20 @@ export function dateFromTime(t) {
 }
 
 function timeLT(t1, t2) {
-  return t1.h < t2.h ? true : t1.m < t2.m;
+  if (t1.h < t2.h) {return true; }
+  else if (t1.h === t2.h && t1.m < t2.m) {
+    return true;
+  } else {
+    return false;
+  }
 }
 function timeGT(t1, t2) {
-  return t1.h > t2.h ? true : t1.m > t2.m;
+  if (t1.h > t2.h) {return true; }
+  else if (t1.h === t2.h && t1.m > t2.m) {
+    return true;
+  } else {
+    return false;
+  }
 }
 function timeEQ(t1, t2) {
   return t1.h === t2.h && t1.m === t2.m;
@@ -56,7 +65,8 @@ export function defaultModel() {
         notes: {},
       }],
       mealsCounter: 0,
-      notesCounter: 0
+      notesCounter: 0,
+      timestamp: new Date(2000, 0, 0, 0, 0, 0)
     },
     state: {
       currentDay: 0,
@@ -64,6 +74,7 @@ export function defaultModel() {
       currentNote: null,
       message: null
     },
+    photos: {},
     apikey: null
   }  
 }
@@ -78,6 +89,21 @@ export function setAPIKey(model, key) {
 
 export function setLastSynced(model, date) {
   return u.updateIn('state.lastSynced', date, model);
+}
+
+export function setData(model, data) {
+  return u({ data: data}, model);
+}
+
+export function syncState(model, data) {
+  return u(
+    { state:
+      { 
+        currentMeal: null,
+        currentNote: null
+      }
+    }, model
+  );
 }
 
 export function currentDay(model) {
@@ -111,8 +137,13 @@ export function todayModified(model) {
   if (days.length === 0) {
     return false;
   } else {
-    var today = new Date();
-    return isSameDay(days[days.length - 1].date, today);
+    return DateTime
+      .fromJSDate(days[days.length - 1].date)
+      .setZone('Europe/Paris')
+      .hasSame(
+        DateTime.local().setZone('Europe/Paris'),
+        'day'
+      );
   }
 }
 
@@ -189,7 +220,7 @@ export function newMeal(model) {
   var meal = {
     id: model.data.mealsCounter,
     name: intelligentName(model),
-    time: time(new Date()),
+    time: time(DateTime.local().setZone('Europe/Paris')),
     ingredients: [],
     photo: null,
     notes: ''
@@ -223,11 +254,6 @@ function updateCurrentMeal(model, updatedMeal) {
   return updateCurrentDay(model, dayWithUpdatedMeal);
 }
 
-function updateCurrentDayMeal(model, id, updatedMeal) {
-  var dayWithUpdatedMeal = u.updateIn('meals.'+id, updatedMeal, currentDay(model));
-  return updateCurrentDay(model, dayWithUpdatedMeal);
-}
-
 export function setCurrentMealField(model, field, value) {
   return updateCurrentMeal(model, u.updateIn(field, value, currentMeal(model)));
 }
@@ -235,6 +261,21 @@ export function setCurrentMealField(model, field, value) {
 export function setMealField(model, day_id, id, field, value) {
   var newModel = u.updateIn('data.days.'+day_id+'.meals.'+id+'.'+field, value, model);
   return newModel;
+}
+
+export function setMealPhoto(model, mealID, value) {
+  var newModel = u({ photos: { [mealID]: value }}, model);
+  return newModel;
+}
+
+export function photo(model, mealID) {
+  if (model.photos === undefined) {
+    return null;
+  } else if (model.photos[mealID] === undefined) {
+    return null;
+  } else {
+    return model.photos[mealID];
+  }
 }
 
 export function allIngredients(model) {
@@ -267,7 +308,7 @@ export function sortedNotes(model) {
 export function newNote(model) {
   var note = {
     id: model.data.notesCounter,
-    time: time(new Date()),
+    time: time(DateTime.local().setZone('Europe/Paris')),
     itch: 0,
     text: ''
   };
