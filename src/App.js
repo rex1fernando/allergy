@@ -74,7 +74,7 @@ class Meal extends Component {
       d({ type: 'update_meal_name', value: data.value })();
     }
     var updateTime = (date) => {
-      d({ type: 'update_meal_time', value: time(date[0]) })();
+      d({ type: 'update_meal_time', value: time(DateTime.fromJSDate(date[0])) })();
     }
     var updateIngredients = (e, data) => {
       d({ type: 'update_meal_ingredients', value: data.value })();
@@ -188,7 +188,7 @@ class Note extends Component {
     var d = this.props.d;
   
     var updateTime = (date) => {
-      d({ type: 'update_note_time', value: time(date[0]) })();
+      d({ type: 'update_note_time', value: time(DateTime.fromJSDate(date[0])) })();
     }
     var updateItch = (value) => {
       d({ type: 'update_note_itch', value: value})();
@@ -418,7 +418,7 @@ class App extends Component {
         <Divider />
         
         <p>{this.props.model.state.lastSynced &&
-         <span>Last synced: {DateTime.fromJSDate(this.props.model.state.lastSynced).setZone('Europe/Paris').toLocaleString({weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false})}. </span>}Version 4.</p> 
+         <span>Last synced: {DateTime.fromJSDate(this.props.model.state.lastSynced).setZone('Europe/Paris').toLocaleString({weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false})}. </span>}Version 7.</p> 
       </Container>
     );
   }

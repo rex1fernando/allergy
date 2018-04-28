@@ -34,6 +34,8 @@ export function update(model, action) {
   // should move all non-data actions here
   if (action.type === 'set_key') {
     return setAPIKey(model, action.value);
+  } else if (action.type === 'notify_firebase_connected') {
+    return setMessage(model, null);
   }
   
   model = updateTimestamp(model);
@@ -88,8 +90,7 @@ export function update(model, action) {
       return reportError(model, action.title, action.text);
     case 'set_last_synced':
       return setLastSynced(model, action.value);
-    case 'notify_firebase_connected':
-      return setMessage(model, null);
+
       
     case 'replace_data':
       return setData(model, action.value);

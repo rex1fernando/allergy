@@ -20,12 +20,9 @@ export default class Dispatch {
       
       if (this.model.apikey !== null && this.model.apikey !== undefined) {
         this.dispatch({ type: 'set_key', value: this.model.apikey });
+      } else {
+        this.persist.firebase.auth().signOut();
       }
-      
-      var phProxy = function(firebaseData) {
-        this.persistDispatch(this.persist.handleFirebasePush(this.model.data, firebaseData));
-      }.bind(this);
-      this.persist.startFirebaseHandler(phProxy);
     }).catch(function(err) {
       return;
     });    
@@ -58,6 +55,14 @@ export default class Dispatch {
     this.model = actions.reduce((model, action) => {
       return update(model, action);
     }, this.model);
+    
+    // if firebase started then start handler
+    if (actions.map((a) => a.type).includes('notify_firebase_connected')) {
+      var phProxy = function(firebaseData) {
+        this.persistDispatch(this.persist.handleFirebasePush(this.model.data, firebaseData));
+      }.bind(this);
+      this.persist.startFirebaseHandler(phProxy);
+    }
     
     ReactDOM.render(
       <App model={this.model}
