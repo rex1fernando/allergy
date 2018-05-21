@@ -81,7 +81,7 @@ class APIKeyInput extends Component {
   render() {
     var d = this.props.d;
     
-    if (this.props.apikey !== null && this.props.apikey !== undefined) {
+    if (this.props.apikey !== null) {
       return null;
     } else {
       return (
@@ -121,7 +121,7 @@ class App extends Component {
       return () => this.props.d(action);
     }
     var model = this.props.model;
-    
+        
     // Sorted lists of MealItems and NoteItems
     var mealItems = model.currentDay.meals.map((meal) => 
       <MealItem meal={meal}
@@ -145,7 +145,9 @@ class App extends Component {
                 message={model.message}
                 d={d} /> }
         
-        <MessageHandler message={model.message} d={d} />      
+        <MessageHandler message={model.message} d={d} />  
+        <APIKeyInput apikey={model.apikey} message={model.message} d={d} />
+    
       
     
         <Button icon="angle left" 
@@ -187,7 +189,7 @@ class App extends Component {
         <p>
         <DirtyIndicator dirty={model.dirty} />
         {model.lastSynced !== null &&
-         <span>Last synced: {DateTime.fromISO(model.lastSynced).setZone('Europe/Paris').toLocaleString({weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false})}. </span>}Version 8.
+         <span>Last synced: {DateTime.fromISO(model.lastSynced).setZone('Europe/Paris').toLocaleString({weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false})}. </span>}Version 9.
         </p> 
       </Container>
     );

@@ -42,7 +42,8 @@ var stateFields = {
   "current_meal": "rel",
   "current_note": "rel",
   "last_synced": "val",
-  "dirty": "val"
+  "dirty": "val",
+  "apikey": "val"
 }
 
 var flatten = function(arr) {
@@ -67,9 +68,11 @@ export class AllergyModel extends Model {
     var message = await this.state.get('message');
     var lastSynced = await this.state.get('last_synced');
     var dirty = await this.state.get('dirty');
-    // if (currentDay === undefined || currentDay === null) {
+    var apikey = await this.state.get('apikey');
+    
+    if (currentDay === undefined || currentDay === null) {
       await this.state.set('current_day', { _id: Day.today() });
-    // }
+    }
     if (currentMeal === undefined) {
       await this.state.set('current_meal', null);
     }
@@ -84,6 +87,9 @@ export class AllergyModel extends Model {
     }
     if (dirty === undefined) {
       await this.state.set('dirty', false);
+    }
+    if (apikey === undefined) {
+      await this.state.set('apikey', null);
     }
   }
   
@@ -107,6 +113,7 @@ export class AllergyModel extends Model {
     this.snapshotC.message = await this.state.get('message');
     this.snapshotC.lastSynced = await this.state.get('last_synced');
     this.snapshotC.dirty = await this.state.get('dirty');
+    this.snapshotC.apikey = await this.state.get('apikey');
     
     if ((action !== undefined && action.type !== 'update')
     || this.snapshotC.meals === undefined
@@ -137,7 +144,8 @@ export class AllergyModel extends Model {
       message: this.snapshotC.message,
       allIngredients: this.snapshotC.allIngredients,
       lastSynced: this.snapshotC.lastSynced,
-      dirty: this.snapshotC.dirty
+      dirty: this.snapshotC.dirty,
+      apikey: this.snapshotC.apikey
     };
   }
 }

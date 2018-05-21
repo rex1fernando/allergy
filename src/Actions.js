@@ -9,9 +9,11 @@ export async function update(model, action) {
   //   return setMessage(model, null);
   // }
   
-  switch (action.type) {    
-   case 'reset_message':
-     return model.state.set('message', null);
+  switch (action.type) {   
+    case 'set_key':
+      return model.state.set('apikey', action.value);
+    case 'reset_message':
+      return model.state.set('message', null);
     case 'view_previous_day':
       var currentDay = await model.state.get('current_day'); 
       return model.state.set('current_day', { _id : Day.previousDay(currentDay._id) });
