@@ -70,6 +70,7 @@ export default class Dispatch {
       return this.render(snapshot);
     } catch (err) {
       console.log(err);
+      alert("Something bad happened. Talk to Rex, sorry!");
     }
   }
   
