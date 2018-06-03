@@ -189,7 +189,7 @@ class App extends Component {
         <p>
         <DirtyIndicator dirty={model.dirty} />
         {model.lastSynced !== null &&
-         <span>Last synced: {DateTime.fromISO(model.lastSynced).setZone('Europe/Paris').toLocaleString({weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false})}. </span>}Version 9.
+         <span>Last synced: {DateTime.fromISO(model.lastSynced).setZone('Europe/Paris').toLocaleString({weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false})}. </span>}Version 10.
         </p> 
       </Container>
     );
