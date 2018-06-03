@@ -19,12 +19,12 @@ export default class Dispatch {
     this.model = new AllergyModel(this.persist.localDB);
     
     this.model.data.indicesPromise
-      .then(this.loginIfReady.bind(this))
       .then(this.model.initializeStateIfUndefined.bind(this.model))
-      .then(this.firstRender.bind(this))
+      .then(this.loginIfReady.bind(this))
       .catch(err => {
         console.log(err);
-      });
+      })
+      .then(this.firstRender.bind(this));
   }
   
   async firstRender() {
@@ -64,7 +64,13 @@ export default class Dispatch {
     try {
       await update(this.model, action);
       if (action.type === 'set_key') {
-        await this.loginIfReady();
+        try {
+          await this.loginIfReady();
+        } catch (err) {
+          if (err.name === 'remote_initialization_error') {
+            console.log("remote failed to initialize.");
+          } else { throw err; }
+        }
       }
       var snapshot = await this.model.snapshot(action);
       return this.render(snapshot);
@@ -77,7 +83,13 @@ export default class Dispatch {
   async loginIfReady() {
     var password = await this.model.state.get('apikey');
     if (password !== null) {
-      var result = await this.persist.initializeRemote(password);
+      try {
+        var result = await this.persist.initializeRemote(password);
+      } catch (err) {
+        var ourErr = new Error("Error initializing remote.");
+        ourErr.name = "remote_initialization_error";
+        throw ourErr;
+      }
       if (!result) {
         this.dispatch({
           type: 'report_error',
